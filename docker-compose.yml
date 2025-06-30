@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    container_name: brapp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: brapp
+      POSTGRES_PASSWORD: brpass
+      POSTGRES_DB: brapp
+    volumes:
+      - brapp-db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U brapp -d brapp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: src/BandRecruiting.API/Dockerfile
+    container_name: brapp-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=brapp;Username=brapp;Password=brpass"
+      Jwt__Issuer: "BandRecruitingApp"
+      Jwt__Audience: "BandRecruitingApp"
+      Jwt__Key: "92467fd27942ca1ea7ef3664c5b806f4ed10092d9d9a4e0e3d81fa3e4bcc58a3744f25b117c5778d3cb8f828864431ad"
+    ports:
+      - "5000:8080"
+    restart: unless-stopped
+
+volumes:
+  brapp-db-data:
